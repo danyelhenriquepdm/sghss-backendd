@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  senha_hash    String
+  tipo_usuario  String
+  ativo         Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  paciente         Paciente?
+  profissional     ProfissionalSaude?
+  administrador    Administrador?
+  logs            LogAuditoria[]
+
+  @@map("usuarios")
+}
+
+model Paciente {
+  id                String   @id @default(uuid())
+  usuario_id        String   @unique
+  cpf               String   @unique
+  nome_completo     String
+  data_nascimento   DateTime
+  telefone          String
+  endereco          String
+  tipo_sanguineo    String?
+  alergias          String?
+
+  usuario          Usuario      @relation(fields: [usuario_id], references: [id])
+  consultas        Consulta[]
+  prontuarios      Prontuario[]
+
+  @@map("pacientes")
+}
+
+model ProfissionalSaude {
+  id                      String   @id @default(uuid())
+  usuario_id              String   @unique
+  registro_profissional   String   @unique
+  especialidade           String
+  nome_completo           String
+  conselho                String
+  numero_conselho         String
+
+  usuario          Usuario        @relation(fields: [usuario_id], references: [id])
+  consultas        Consulta[]
+  prontuarios      Prontuario[]
+  agendas          Agenda[]
+
+  @@map("profissionais_saude")
+}
+
+model Administrador {
+  id             String @id @default(uuid())
+  usuario_id     String @unique
+  nome_completo  String
+  departamento   String
+  nivel_acesso   String
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@map("administradores")
+}
+
+model Consulta {
+  id                String    @id @default(uuid())
+  paciente_id       String
+  profissional_id   String
+  data_hora         DateTime
+  status            String
+  tipo              String
+  modalidade        String
+  observacoes       String?
+  created_at        DateTime  @default(now())
+
+  paciente      Paciente           @relation(fields: [paciente_id], references: [id])
+  profissional  ProfissionalSaude  @relation(fields: [profissional_id], references: [id])
+  prontuario    Prontuario?
+
+  @@map("consultas")
+}
+
+model Prontuario {
+  id              String   @id @default(uuid())
+  paciente_id     String
+  consulta_id     String   @unique
+  profissional_id String
+  anamnese        String
+  diagnostico     String
+  observacoes     String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  paciente      Paciente           @relation(fields: [paciente_id], references: [id])
+  consulta      Consulta           @relation(fields: [consulta_id], references: [id])
+  profissional  ProfissionalSaude  @relation(fields: [profissional_id], references: [id])
+
+  @@map("prontuarios")
+}
+
+model Agenda {
+  id                  String   @id @default(uuid())
+  profissional_id     String
+  data                DateTime
+  hora_inicio         DateTime
+  hora_fim            DateTime
+  disponivel          Boolean  @default(true)
+  duracao_consulta    Int
+
+  profissional ProfissionalSaude @relation(fields: [profissional_id], references: [id])
+
+  @@map("agendas")
+}
+
+model LogAuditoria {
+  id                 String   @id @default(uuid())
+  usuario_id         String
+  acao               String
+  entidade           String
+  dados_anteriores   Json?
+  dados_novos        Json?
+  timestamp          DateTime @default(now())
+  ip_origem          String
+  user_agent         String?
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@map("logs_auditoria")
+}
